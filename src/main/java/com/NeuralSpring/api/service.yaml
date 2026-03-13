@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: neuralspring-service
+spec:
+  selector:
+    app: neuralspring
+  ports:
+    - protocol: TCP
+      port: 80         # Porta que você vai usar no Postman
+      targetPort: 8080 # Porta real do Spring Boot dentro do container
+  type: LoadBalancer   # Faz o Kubernetes expor o IP para você

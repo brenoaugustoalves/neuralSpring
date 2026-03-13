@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  # 1. Banco de Dados PostgreSQL (Otimizado com Healthcheck)
+  postgres-db:
+    image: postgres:15-alpine
+    container_name: neural-postgres
+    environment:
+      POSTGRES_DB: neuraldb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d neuraldb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 2. Serviço de IA Ollama (Com suporte a GPU NVIDIA)
+  ollama:
+    image: ollama/ollama:latest
+    container_name: neural-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    # ESSA SEÇÃO ABAIXO É O QUE TIRA O TTFB DE 1 MINUTO (USANDO GPU)
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  # 3. Sua API Java (NeuralSpring)
+  neuralspring-api:
+    build: .
+    container_name: neuralspring-app
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-db:5432/neuraldb
+      - SPRING_AI_OLLAMA_BASE_URL=http://ollama:11434
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+    # Adicionando limites para o Java não "brigar" por CPU com o Ollama
+    deploy:
+      resources:
+        limits:
+          memory: 1G # Garante que a JVM tenha seu espaço reservado
+
+volumes:
+  postgres_data:
+    name: api_postgres_data
+  ollama_data:
+    name: api_ollama_data

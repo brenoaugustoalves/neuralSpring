@@ -1,0 +1,15 @@
+livenessProbe: # "Você está vivo?"
+  httpGet:
+    path: /liveness          # Alterado: agora aponta para o seu endpoint leve
+    port: 8080
+  initialDelaySeconds: 30    # Aumentei para 30s: o Spring Boot 3+ costuma levar isso para estabilizar
+  periodSeconds: 15          # Checagem menos frequente para economizar CPU
+
+readinessProbe: # "Você pode receber clientes?"
+  httpGet:
+    path: /healthz           # Alterado: agora usa sua lógica inteligente com JSON e isAlive
+    port: 8080
+  initialDelaySeconds: 15    # Começa a testar antes do liveness para liberar tráfego rápido
+  periodSeconds: 5           # Checa rápido: se o app "engasgar", o tráfego é cortado na hora
+  failureThreshold: 3        # Só retira do ar se falhar 3 vezes seguidas (evita falsos positivos)
+
